@@ -1,5 +1,3 @@
-// This code is written by Nick and Conor
-
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/syscalls.h>
@@ -33,7 +31,7 @@
 unsigned long long total_time_elapsed = 0;
 
 // use this struct to store the process information
-struct process_info
+struct process_infogit
 {
 	unsigned long pid;
 	unsigned long long start_time;
