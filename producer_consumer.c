@@ -1,3 +1,5 @@
+// This code is written by Nick and Conor
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/syscalls.h>
