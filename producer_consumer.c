@@ -14,6 +14,7 @@
 #include <linux/delay.h>
 #include <asm/uaccess.h>
 #include <asm/param.h>
+#include <linux/moduleparam.h>
 #include <linux/timer.h>
 #include <linux/ktime.h>
 #include <linux/time_namespace.h>
@@ -31,7 +32,7 @@
 unsigned long long total_time_elapsed = 0;
 
 // use this struct to store the process information
-struct process_infogit
+struct process_info
 {
 	unsigned long pid;
 	unsigned long long start_time;
@@ -56,9 +57,16 @@ int use = 0;
 
 // TODO Define your input parameters (buffSize, prod, cons, uuid) here
 // Then use module_param to pass them from insmod command line. (--Project 1)
-
+static int buffSize, prod, cons, uuid;
+module_param(uuid, int, 0644);
+module_param(buffSize, int, 0644);
+module_param(prod, int, 0644);
+module_param(cons, int, 0644);
 
 // TODO Define your semaphores here (empty, full, mutex)
+struct semaphore empty;
+struct semaphore full;
+struct semaphore mutex;
 
 int producer_thread_function(void *pv)
 {
@@ -74,6 +82,8 @@ int producer_thread_function(void *pv)
 			// use down() and up() for semaphores
 			// Hint: Please refer to sample code to see how to use process_info struct
 			// Hint: kthread_should_stop() should be checked after down() and before up()
+
+
 
 			total_no_of_process_produced++;
 			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
