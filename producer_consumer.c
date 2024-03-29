@@ -83,7 +83,13 @@ int producer_thread_function(void *pv)
 			// Hint: Please refer to sample code to see how to use process_info struct
 			// Hint: kthread_should_stop() should be checked after down() and before up()
 
-
+			// Populate the buffer with process information
+            if (fill < buffSize) {
+                buffer[fill].pid = task->pid;
+                buffer[fill].start_time = task->start_time;
+                buffer[fill].boot_time = task->start_boottime;
+                fill++;
+            }
 
 			total_no_of_process_produced++;
 			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
