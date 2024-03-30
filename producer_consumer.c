@@ -109,12 +109,12 @@ int producer_thread_function(void *pv)
 			// increment the full semaphor to signal consumer that there is a new buffer item to consume
 			up(&full);
 
-			if(down(&empty))
-				break;
-
 			total_no_of_process_produced++;
 			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
 				   total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
+
+			if(fill >= buffSize)
+				break;
 		}
 	}
 
