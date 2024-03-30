@@ -52,7 +52,9 @@ static struct task_struct *ctx_consumer_thread[MAX_NO_OF_CONSUMERS];
 
 // use fill and use to keep track of the buffer
 struct process_info buffer[MAX_BUFFER_SIZE];
+// Number of Producer processes in the Buffer
 int fill = 0;
+// Number of Consumer Processes in the Buffer
 int use = 0;
 
 // TODO Define your input parameters (buffSize, prod, cons, uuid) here
@@ -66,12 +68,14 @@ module_param(cons, int, 0644);
 // TODO Define your semaphores here (empty, full, mutex)
 struct semaphore empty;
 struct semaphore full;
-struct semaphore mutex;
+struct semaphore mutexLock;
 
 int producer_thread_function(void *pv)
 {
 	allow_signal(SIGKILL);
 	struct task_struct *task;
+
+	// Processes have just been created by the test script
 
 	for_each_process(task)
 	{
@@ -83,13 +87,25 @@ int producer_thread_function(void *pv)
 			// Hint: Please refer to sample code to see how to use process_info struct
 			// Hint: kthread_should_stop() should be checked after down() and before up()
 
-			// Populate the buffer with process information
-            if (fill < buffSize) {
+			// Check the empty semaphor to see if there are any empty slots in the buffer - if 0 then producer will wait - sleep
+			down(&empty);
+
+			// Aquire the MUTEX lock to pause all other threads
+			down(&mutexLock);
+
+			// Perform the shared Memory Operations
+			if (fill < MAX_BUFFER_SIZE) {
                 buffer[fill].pid = task->pid;
                 buffer[fill].start_time = task->start_time;
                 buffer[fill].boot_time = task->start_boottime;
                 fill++;
             }
+
+			// Release the MUTEX lock to wake up a sleeping thread
+			up(&mutexLock);
+
+			// increment the full semaphor to signal consumer that there is a new buffer item to consume
+			up(&full);
 
 			total_no_of_process_produced++;
 			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
@@ -115,6 +131,22 @@ int consumer_thread_function(void *pv)
 		// use down() and up() for semaphores
 		// Hint: Please refer to sample code to see how to use process_info struct
 		// Hint: end_flag should be checked after down() and before up()
+
+		// check the full semaphor to determine if there is a buffer slot to consume
+		down(&full);
+
+		// take the MUTEX lock to pause all other threads
+		down(&mutexLock);
+
+		// Perform the shared Memory Operation
+		int process_pid = buffer[use].pid;
+		unsigned long long start_time_ns = buffer[use].start_time;
+
+		// Release the MUTEX lock to wake up a sleeping thread
+		up(&mutexLock);
+
+		// increment the empty semaphor to signal the producer that there is a new empty slot
+		up(&empty);
 
 		unsigned long long ktime = ktime_get_ns();
 		unsigned long long process_time_elapsed = (ktime - start_time_ns) / 1000000000;
@@ -170,15 +202,29 @@ static int __init thread_init_module(void)
 	if (buffSize > 0 && (prod >= 0 && prod < 2))
 	{
 		// TODO initialize the semaphores here
+		sema_init(&empty, buffSize);
+		sema_init(&full, 0);
+		sema_init(&mutexLock, 1);
 
 		name_threads();
 
+		//Initializes the buffer with process info with attributes: PID, Start time, Boot time
 		for (int index = 0; index < buffSize; index++)
 			buffer[index] = process_default_info;
 
 		// TODO use kthread_run to create producer kernel threads here
 		// Hint: Please refer to sample code to see how to use kthread_run, kthread_should_stop, kthread_stop, etc.
 		// Hint: use ctx_producer_thread[index] to store the return value of kthread_run
+
+		for (int i = 0; i < prod; i++)
+		{
+			ctx_producer_thread[i] = kthread_run(producer_thread_function, NULL, producers[i]);
+			// ctx_producer thread is a double array that holds the task struct that the thread is on
+			// ie holds thread PID and UID
+		}
+		
+
+		
 
 		// TODO use kthread_run to create consumer kernel threads here
 		// Hint: Please refer to sample code to see how to use kthread_run, kthread_should_stop, kthread_stop, etc.
@@ -221,7 +267,7 @@ static void __exit thread_exit_module(void)
 				for (int index = 0; index < cons; index++)
 				{
 					up(&full);
-					up(&mutex);
+					up(&mutexLock);
 				}
 
 				for (int index = 0; index < cons; index++)
