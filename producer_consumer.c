@@ -91,7 +91,7 @@ int producer_thread_function(void *pv)
 			down(&empty);
 
 			// Aquire the MUTEX lock to pause all other threads
-			down(&mutexLock)
+			down(&mutexLock);
 				
 			// Perform the shared Memory Operations
 			if (fill < buffSize) {
@@ -141,7 +141,7 @@ int consumer_thread_function(void *pv)
 		down(&mutexLock);
 
 		// Perform the shared Memory Operation
-		int process_pid = buffer[use].pid;
+		unsigned long process_pid = buffer[use].pid;
 		unsigned long long start_time_ns = buffer[use].start_time;
 
 		// Release the MUTEX lock to wake up a sleeping thread
