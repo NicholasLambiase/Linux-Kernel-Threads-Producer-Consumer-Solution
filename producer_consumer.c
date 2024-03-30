@@ -94,7 +94,7 @@ int producer_thread_function(void *pv)
 			down(&mutexLock);
 				
 			// Perform the shared Memory Operations
-			if (fill < buffSize) {
+			if (fill < buffSize-1) {
 				buffer[fill].pid = task->pid;
 				buffer[fill].start_time = task->start_time;
 				buffer[fill].boot_time = task->start_boottime;
