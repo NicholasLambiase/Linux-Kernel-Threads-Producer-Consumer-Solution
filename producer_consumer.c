@@ -94,7 +94,7 @@ int producer_thread_function(void *pv)
 			down(&mutexLock);
 				
 			// Perform the shared Memory Operations
-			if (fill < buffSize-1) {
+			if (fill < buffSize) {
 				buffer[fill].pid = task->pid;
 				buffer[fill].start_time = task->start_time;
 				buffer[fill].boot_time = task->start_boottime;
@@ -108,6 +108,9 @@ int producer_thread_function(void *pv)
 
 			// increment the full semaphor to signal consumer that there is a new buffer item to consume
 			up(&full);
+
+			if(down(&empty))
+				break;
 
 			total_no_of_process_produced++;
 			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
