@@ -90,19 +90,21 @@ int producer_thread_function(void *pv)
 			// Check the empty semaphor to see if there are any empty slots in the buffer - if 0 then producer will wait - sleep
 			down(&empty);
 
-			// Aquire the MUTEX lock to pause all other threads
-			down(&mutexLock);
+			while (!kthread_should_stop()) {
+				// Aquire the MUTEX lock to pause all other threads
+				down(&mutexLock);
 
-			// Perform the shared Memory Operations
-			if (fill < MAX_BUFFER_SIZE) {
-                buffer[fill].pid = task->pid;
-                buffer[fill].start_time = task->start_time;
-                buffer[fill].boot_time = task->start_boottime;
-                fill++;
-            }
+				// Perform the shared Memory Operations
+				if (fill < MAX_BUFFER_SIZE) {
+					buffer[fill].pid = task->pid;
+					buffer[fill].start_time = task->start_time;
+					buffer[fill].boot_time = task->start_boottime;
+					fill++;
+				}
 
-			// Release the MUTEX lock to wake up a sleeping thread
-			up(&mutexLock);
+				// Release the MUTEX lock to wake up a sleeping thread
+				up(&mutexLock);
+			}
 
 			// increment the full semaphor to signal consumer that there is a new buffer item to consume
 			up(&full);
