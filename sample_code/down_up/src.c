@@ -33,6 +33,7 @@ static int __init my_init(void) {
     sema_init(&my_semaphore, 1); // Initialize the semaphore with an initial count of 1 (available)
 
     my_thread = kthread_run(my_thread_function, NULL, "my_thread");
+    printk(KERN_INFO "My Thread Info: ", my_thread)
 
     if (IS_ERR(my_thread)) {
         pr_err("Failed to create thread\n");

@@ -87,29 +87,27 @@ int producer_thread_function(void *pv)
 			// Hint: Please refer to sample code to see how to use process_info struct
 			// Hint: kthread_should_stop() should be checked after down() and before up()
 
+			// Aquire the MUTEX lock to pause all other threads
+			down(&mutexLock)
+			
 			// Check the empty semaphor to see if there are any empty slots in the buffer - if 0 then producer will wait - sleep
 			down(&empty);
+				
+			// Perform the shared Memory Operations
+			if (fill < MAX_BUFFER_SIZE) {
+				buffer[fill].pid = task->pid;
+				buffer[fill].start_time = task->start_time;
+				buffer[fill].boot_time = task->start_boottime;
+				fill++;
 
-			// Aquire the MUTEX lock to pause all other threads
-			down(&mutexLock);
-
-			while (!kthread_should_stop()) {
-				// Perform the shared Memory Operations
-				if (fill < MAX_BUFFER_SIZE) {
-					buffer[fill].pid = task->pid;
-					buffer[fill].start_time = task->start_time;
-					buffer[fill].boot_time = task->start_boottime;
-					fill++;
-
-					PCINFO("The buffer index is at: %d", fill);
-				}
+				PCINFO("The buffer index is at: %d", fill);
 			}
-
-			// Release the MUTEX lock to wake up a sleeping thread
-			up(&mutexLock);
 
 			// increment the full semaphor to signal consumer that there is a new buffer item to consume
 			up(&full);
+
+			// Release the MUTEX lock to wake up a sleeping thread
+			up(&mutexLock);
 
 			total_no_of_process_produced++;
 			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
