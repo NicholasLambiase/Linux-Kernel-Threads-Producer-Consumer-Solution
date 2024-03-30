@@ -100,6 +100,8 @@ int producer_thread_function(void *pv)
 					buffer[fill].start_time = task->start_time;
 					buffer[fill].boot_time = task->start_boottime;
 					fill++;
+
+					printk("The buffer index is at: " + fill + "\n");
 				}
 
 				// Release the MUTEX lock to wake up a sleeping thread
