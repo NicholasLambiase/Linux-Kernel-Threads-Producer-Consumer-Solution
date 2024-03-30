@@ -107,6 +107,8 @@ int producer_thread_function(void *pv)
 
 				// increment the full semaphor to signal consumer that there is a new buffer item to consume
 				up(&full);
+				if(fill == buffSize)
+					break;
 			}
 		}
 		break;
