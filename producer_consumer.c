@@ -83,6 +83,7 @@ int producer_thread_function(void *pv)
 
 	// Check the empty semaphor to see if there are any empty slots in the buffer - if 0 then producer will wait - sleep
 	down(&empty);
+	printk(KERN_INFO"There is an empty slot - Decrementing")
 
 	while (!kthread_should_stop())
 	{
@@ -105,7 +106,7 @@ int producer_thread_function(void *pv)
 
 				// PCINFO("The buffer index is at: %d", fill);
 				total_no_of_process_produced++;
-				PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
+				PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n\n", current->comm,
 					total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
 					
 				}
@@ -255,7 +256,10 @@ static void __exit thread_exit_module(void)
 			{
 				// This allows the producer to run
 				if (!cons)
+				{
 					up(&empty);
+					printk(KERN_INF0 "Adding to empty semaphore to exit while(kthread) loop");
+				}
 
 				for (int index = 0; index < prod; index++)
 				{
