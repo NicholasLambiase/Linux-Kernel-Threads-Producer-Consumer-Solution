@@ -81,41 +81,43 @@ int producer_thread_function(void *pv)
 	// Hint: Please refer to sample code to see how to use process_info struct
 	// Hint: kthread_should_stop() should be checked after down() and before up()
 
-	while (!kthread_should_stop())
+	for_each_process(task)
 	{
-		for_each_process(task)
+		if (task->cred->uid.val == uuid)
 		{
-			if (task->cred->uid.val == uuid)
-			{
-				// Wait for a slot in the buffer to be empty
-				down(&empty);
+			// Wait for a slot in the buffer to be empty
+			down(&empty);
 
-				// Aquire Mutex lock to enter critical section
-				down(&mutexLock);
+			// Aquire Mutex lock to enter critical section
+			down(&mutexLock);
 
-				// Perform the shared Memory Operations
-				if (fill < buffSize) {
-					buffer[fill].pid = task->pid;
-					buffer[fill].start_time = task->start_time;
-					buffer[fill].boot_time = task->start_boottime;
-					fill = fill + 1 % buffSize;
-
-					total_no_of_process_produced++;
-					PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n\n", current->comm,
-						total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
-				}
-
-				// Release the Mutex lock
-				up(&mutexLock);
-
-				// Signal that a slot in the buffer has been filled
-				up(&full);
+			if(kthread_should_stop()){
+				PCINFO("Thread in kthread_should_stop condition - breaking for loop\n");
+				break;
 			}
+
+			// Perform the shared Memory Operations
+			if (fill < buffSize) {
+				buffer[fill].pid = task->pid;
+				buffer[fill].start_time = task->start_time;
+				buffer[fill].boot_time = task->start_boottime;
+				fill = fill + 1 % buffSize;
+
+				total_no_of_process_produced++;
+				PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n\n", current->comm,
+					total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
+			}
+
+			// Release the Mutex lock
+			up(&mutexLock);
+
+			// Signal that a slot in the buffer has been filled
+			up(&full);
 		}
 		
 		// In the Case where the Producer thread has iterated through all of the tasks and filled the buffer
 		break;
-
+		
 	}
 
 	PCINFO("[%s] Producer Thread stopped.\n", current->comm);
