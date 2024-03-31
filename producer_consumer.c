@@ -87,9 +87,11 @@ int producer_thread_function(void *pv)
 		{
 			// Wait for a slot in the buffer to be empty
 			down(&empty);
+			printk(KERN_INFO "Decrementing 'empty' semaphor\n");
 
 			// Aquire Mutex lock to enter critical section
 			down(&mutexLock);
+			printk(KERN_INFO "Aquired MUTEX lock\n");
 
 			if(kthread_should_stop()){
 				PCINFO("Thread in kthread_should_stop condition - breaking for loop\n");
@@ -110,9 +112,12 @@ int producer_thread_function(void *pv)
 
 			// Release the Mutex lock
 			up(&mutexLock);
+			printk(KERN_INFO "Releasing MUTEX lock\n");
+
 
 			// Signal that a slot in the buffer has been filled
 			up(&full);
+			printk(KERN_INFO "Incrementing 'full' semaphor\n");
 		}
 		
 		// In the Case where the Producer thread has iterated through all of the tasks and filled the buffer
