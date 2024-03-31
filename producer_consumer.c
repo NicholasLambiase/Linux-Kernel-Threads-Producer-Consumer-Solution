@@ -94,7 +94,6 @@ int producer_thread_function(void *pv)
 			// printk(KERN_INFO "Aquired MUTEX lock\n");
 
 			if(kthread_should_stop()){
-				PCINFO("Thread in kthread_should_stop condition - breaking for loop\n");
 				break;
 			}
 
@@ -105,7 +104,7 @@ int producer_thread_function(void *pv)
 			fill = (fill + 1) % buffSize;
 
 			total_no_of_process_produced++;
-			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n\n", current->comm,
+			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
 				total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
 			
 			// Release the Mutex lock
