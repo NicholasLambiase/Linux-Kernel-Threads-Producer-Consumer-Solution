@@ -99,17 +99,15 @@ int producer_thread_function(void *pv)
 			}
 
 			// Perform the shared Memory Operations
-			if (fill < buffSize) {
-				buffer[fill].pid = task->pid;
-				buffer[fill].start_time = task->start_time;
-				buffer[fill].boot_time = task->start_boottime;
-				fill = fill + 1 % buffSize;
+			buffer[fill].pid = task->pid;
+			buffer[fill].start_time = task->start_time;
+			buffer[fill].boot_time = task->start_boottime;
+			fill = (fill + 1) % buffSize;
 
-				total_no_of_process_produced++;
-				PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n\n", current->comm,
-					total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
-			}
-
+			total_no_of_process_produced++;
+			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n\n", current->comm,
+				total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
+			
 			// Release the Mutex lock
 			up(&mutexLock);
 			// printk(KERN_INFO "Releasing MUTEX lock\n");
@@ -140,23 +138,22 @@ int consumer_thread_function(void *pv)
 		// Hint: Please refer to sample code to see how to use process_info struct
 		// Hint: end_flag should be checked after down() and before up()
 
-		// take the MUTEX lock to pause all other threads
-		down(&mutexLock);
-
 		// check the full semaphor to determine if there is a buffer slot to consume
 		down(&full);
-
 		
+		// take the MUTEX lock to pause all other threads
+		down(&mutexLock);
 
 		// Perform the shared Memory Operation
 		unsigned long process_pid = buffer[use].pid;
 		unsigned long long start_time_ns = buffer[use].start_time;
-
-		// increment the empty semaphor to signal the producer that there is a new empty slot
-		up(&empty);
+		use = (use + 1) % buffSize;
 
 		// Release the MUTEX lock to wake up a sleeping thread
 		up(&mutexLock);
+
+		// increment the empty semaphor to signal the producer that there is a new empty slot
+		up(&empty);
 
 		unsigned long long ktime = ktime_get_ns();
 		unsigned long long process_time_elapsed = (ktime - start_time_ns) / 1000000000;
