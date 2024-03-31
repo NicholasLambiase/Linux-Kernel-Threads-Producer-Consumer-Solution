@@ -75,48 +75,45 @@ int producer_thread_function(void *pv)
 	allow_signal(SIGKILL);
 	struct task_struct *task;
 
-	// Processes have just been created by the test script
+	down(&mutexLock);
 
-	for_each_process(task)
+	while (!kthread_should_stop())
 	{
-		if (task->cred->uid.val == uuid)
+		for_each_process(task)
 		{
-			// TODO Implement your producer kernel thread here
-			// use kthread_should_stop() to check if the kernel thread should stop
-			// use down() and up() for semaphores
-			// Hint: Please refer to sample code to see how to use process_info struct
-			// Hint: kthread_should_stop() should be checked after down() and before up()
-			
-			// Check the empty semaphor to see if there are any empty slots in the buffer - if 0 then producer will wait - sleep
-			down(&empty);
-
-			// Aquire the MUTEX lock to pause all other threads
-			down(&mutexLock);
+			if (task->cred->uid.val == uuid)
+			{
+				// TODO Implement your producer kernel thread here
+				// use kthread_should_stop() to check if the kernel thread should stop
+				// use down() and up() for semaphores
+				// Hint: Please refer to sample code to see how to use process_info struct
+				// Hint: kthread_should_stop() should be checked after down() and before up()
 				
-			// Perform the shared Memory Operations
-			if (fill < buffSize) {
-				buffer[fill].pid = task->pid;
-				buffer[fill].start_time = task->start_time;
-				buffer[fill].boot_time = task->start_boottime;
-				fill++;
+				// Check the empty semaphor to see if there are any empty slots in the buffer - if 0 then producer will wait - sleep
+				down(&empty);
+					
+				// Perform the shared Memory Operations
+				if (fill < buffSize) {
+					buffer[fill].pid = task->pid;
+					buffer[fill].start_time = task->start_time;
+					buffer[fill].boot_time = task->start_boottime;
+					fill++;
 
-				// PCINFO("The buffer index is at: %d", fill);
+					// PCINFO("The buffer index is at: %d", fill);
+					total_no_of_process_produced++;
+					PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
+						total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
+				}
+
+				// increment the full semaphor to signal consumer that there is a new buffer item to consume
+				up(&full);
 			}
-
-			// Release the MUTEX lock to wake up a sleeping thread
-			up(&mutexLock);
-
-			// increment the full semaphor to signal consumer that there is a new buffer item to consume
-			up(&full);
-
-			total_no_of_process_produced++;
-			PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n", current->comm,
-				   total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
-
-			if(fill >= buffSize)
-				break;
 		}
+		break;
 	}
+
+	// Release the MUTEX lock to wake up a sleeping thread
+	up(&mutexLock);
 
 	PCINFO("[%s] Producer Thread stopped.\n", current->comm);
 	ctx_producer_thread[0] = NULL;
