@@ -71,19 +71,15 @@ struct semaphore full;
 struct semaphore mutexLock;
 
 int producer_thread_function(void *pv)
-{
+{	
+	allow_signal(SIGKILL);
+	struct task_struct *task;
+
 	// TODO Implement your producer kernel thread here
 	// use kthread_should_stop() to check if the kernel thread should stop
 	// use down() and up() for semaphores
 	// Hint: Please refer to sample code to see how to use process_info struct
 	// Hint: kthread_should_stop() should be checked after down() and before up()
-	
-	allow_signal(SIGKILL);
-	struct task_struct *task;
-
-	// Check the empty semaphor to see if there are any empty slots in the buffer - if 0 then producer will wait - sleep
-	down(&empty);
-	printk(KERN_INFO"There is an empty slot - Decrementing")
 
 	while (!kthread_should_stop())
 	{
@@ -91,7 +87,10 @@ int producer_thread_function(void *pv)
 		{
 			if (task->cred->uid.val == uuid)
 			{
-				// Stop all other processes from accessing the Buffer
+				// Wait for a slot in the buffer to be empty
+				down(&empty);
+
+				// Aquire Mutex lock to enter critical section
 				down(&mutexLock);
 
 				// Perform the shared Memory Operations
@@ -100,22 +99,24 @@ int producer_thread_function(void *pv)
 					buffer[fill].start_time = task->start_time;
 					buffer[fill].boot_time = task->start_boottime;
 					fill = fill + 1 % buffSize;
-				
-				// Release the MUTEX lock to wake up a sleeping thread
+
+					total_no_of_process_produced++;
+					PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n\n", current->comm,
+						total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
+				}
+
+				// Release the Mutex lock
 				up(&mutexLock);
 
-				// PCINFO("The buffer index is at: %d", fill);
-				total_no_of_process_produced++;
-				PCINFO("[%s] Produce-Item#:%d at buffer index: %d for PID:%d \n\n", current->comm,
-					total_no_of_process_produced, (fill + buffSize - 1) % buffSize, task->pid);
-					
-				}
+				// Signal that a slot in the buffer has been filled
+				up(&full);
 			}
 		}
-	}
+		
+		// In the Case where the Producer thread has iterated through all of the tasks and filled the buffer
+		break;
 
-	// increment the full semaphor to signal consumer that there is a new buffer item to consume
-	up(&full);
+	}
 
 	PCINFO("[%s] Producer Thread stopped.\n", current->comm);
 	ctx_producer_thread[0] = NULL;
@@ -258,7 +259,7 @@ static void __exit thread_exit_module(void)
 				if (!cons)
 				{
 					up(&empty);
-					printk(KERN_INF0 "Adding to empty semaphore to exit while(kthread) loop");
+					// printk(KERN_INF0 "Adding to empty semaphore to exit while(kthread) loop");
 				}
 
 				for (int index = 0; index < prod; index++)
