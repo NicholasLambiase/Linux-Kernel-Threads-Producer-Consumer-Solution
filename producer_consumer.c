@@ -144,9 +144,16 @@ int consumer_thread_function(void *pv)
 		// take the MUTEX lock to pause all other threads
 		down(&mutexLock);
 
+		if (end_flag == 1)
+			break;
+
 		// Perform the shared Memory Operation
+		// Storing the buffer data for local operation
 		unsigned long process_pid = buffer[use].pid;
 		unsigned long long start_time_ns = buffer[use].start_time;
+
+		// Operating on the data of the buffer and incrementing
+		buffer[use] = process_default_info;
 		use = (use + 1) % buffSize;
 
 		// Release the MUTEX lock to wake up a sleeping thread
