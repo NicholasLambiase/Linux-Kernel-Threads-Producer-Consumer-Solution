@@ -230,6 +230,7 @@ static int __init thread_init_module(void)
 		// Hint: use ctx_producer_thread[index] to store the return value of kthread_run
 
 		for (int i = 0; i < prod; i++)
+			PCINFO("[%s] kthread Producer Created Successfully\n");
 			ctx_producer_thread[i] = kthread_run(producer_thread_function, NULL, producers[i]);
 
 		// TODO use kthread_run to create consumer kernel threads here
@@ -261,11 +262,9 @@ static void __exit thread_exit_module(void)
 			// We will have haning processes if consumers == 0 or producers == 0
 			if (total_no_of_process_consumed == total_no_of_process_produced || !cons || !prod)
 			{
-				// This allows the producer to run
 				if (!cons)
 				{
 					up(&empty);
-					// printk(KERN_INF0 "Adding to empty semaphore to exit while(kthread) loop");
 				}
 
 				for (int index = 0; index < prod; index++)
