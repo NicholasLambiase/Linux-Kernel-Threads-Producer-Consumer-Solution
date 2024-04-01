@@ -52,34 +52,25 @@ static struct task_struct *ctx_consumer_thread[MAX_NO_OF_CONSUMERS];
 
 // use fill and use to keep track of the buffer
 struct process_info buffer[MAX_BUFFER_SIZE];
-// Number of Producer processes in the Buffer
 int fill = 0;
-// Number of Consumer Processes in the Buffer
 int use = 0;
 
-// TODO Define your input parameters (buffSize, prod, cons, uuid) here
-// Then use module_param to pass them from insmod command line. (--Project 1)
 static int buffSize, prod, cons, uuid;
 module_param(uuid, int, 0644);
 module_param(buffSize, int, 0644);
 module_param(prod, int, 0644);
 module_param(cons, int, 0644);
 
-// TODO Define your semaphores here (empty, full, mutex)
 struct semaphore empty;
 struct semaphore full;
 struct semaphore mutexLock;
 
 int producer_thread_function(void *pv)
 {	
+	PCINFO("[%s] kthread Producer Created Successfully\n", current->comm);
+	
 	allow_signal(SIGKILL);
 	struct task_struct *task;
-
-	// TODO Implement your producer kernel thread here
-	// use kthread_should_stop() to check if the kernel thread should stop
-	// use down() and up() for semaphores
-	// Hint: Please refer to sample code to see how to use process_info struct
-	// Hint: kthread_should_stop() should be checked after down() and before up()
 
 	for_each_process(task)
 	{
@@ -87,15 +78,12 @@ int producer_thread_function(void *pv)
 		{
 			// Wait for a slot in the buffer to be empty
 			down(&empty);
-			// printk(KERN_INFO "Decrementing 'empty' semaphor\n");
 
 			// Aquire Mutex lock to enter critical section
 			down(&mutexLock);
-			// printk(KERN_INFO "Aquired MUTEX lock\n");
 
-			if(kthread_should_stop()){
+			if(kthread_should_stop())
 				break;
-			}
 
 			// Perform the shared Memory Operations
 			buffer[fill].pid = task->pid;
@@ -109,11 +97,10 @@ int producer_thread_function(void *pv)
 			
 			// Release the Mutex lock
 			up(&mutexLock);
-			// printk(KERN_INFO "Releasing MUTEX lock\n");
-
+			
 			// Signal that a slot in the buffer has been filled
 			up(&full);
-			// printk(KERN_INFO "Incrementing 'full' semaphor\n");
+
 		}
 		
 	}
@@ -125,18 +112,13 @@ int producer_thread_function(void *pv)
 
 int consumer_thread_function(void *pv)
 {
+	PCINFO("[%s] kthread Consumer Created Successfully\n", current->comm);
+	
 	allow_signal(SIGKILL);
 	int no_of_process_consumed = 0;
 
 	while (!kthread_should_stop())
 	{
-		// TODO Implement your consumer kernel thread here
-		// use end_flag (see kernel module exit function) to check if the kernel thread should stop
-		// if end_flag, then break
-		// use down() and up() for semaphores
-		// Hint: Please refer to sample code to see how to use process_info struct
-		// Hint: end_flag should be checked after down() and before up()
-
 		// check the full semaphor to determine if there is a buffer slot to consume
 		down(&full);
 		
@@ -214,7 +196,6 @@ static int __init thread_init_module(void)
 
 	if (buffSize > 0 && (prod >= 0 && prod < 2))
 	{
-		// TODO initialize the semaphores here
 		sema_init(&empty, buffSize);
 		sema_init(&full, 0);
 		sema_init(&mutexLock, 1);
@@ -225,22 +206,15 @@ static int __init thread_init_module(void)
 		for (int index = 0; index < buffSize; index++)
 			buffer[index] = process_default_info;
 
-		// TODO use kthread_run to create producer kernel threads here
-		// Hint: Please refer to sample code to see how to use kthread_run, kthread_should_stop, kthread_stop, etc.
-		// Hint: use ctx_producer_thread[index] to store the return value of kthread_run
-
-		for (int i = 0; i < prod; i++)
-			PCINFO("[%s] kthread Producer Created Successfully\n");
+		// Create Producer threads
+		for (int i = 0; i < prod; i++) {
 			ctx_producer_thread[i] = kthread_run(producer_thread_function, NULL, producers[i]);
+		}
 
-		// TODO use kthread_run to create consumer kernel threads here
-		// Hint: Please refer to sample code to see how to use kthread_run, kthread_should_stop, kthread_stop, etc.
-		// Hint: use ctx_consumer_thread[index] to store the return value of kthread_run
-		
-		for (int i = 0; i < cons; i++)
+		// Create Consumer Threads
+		for (int i = 0; i < cons; i++) {
 			ctx_consumer_thread[i] = kthread_run(consumer_thread_function, NULL, consumers[i]);
-		
-
+		}
 	}
 	else
 	{
@@ -314,6 +288,6 @@ module_init(thread_init_module);
 module_exit(thread_exit_module);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Your Name Here");
+MODULE_AUTHOR("Nicholas Lambiase & Conor Yosick");
 MODULE_DESCRIPTION("CSE330 2024 Spring Project 3 Process Management\n");
 MODULE_VERSION("0.1");
